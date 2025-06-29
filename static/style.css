@@ -1,0 +1,157 @@
+body {
+    font-family: 'Inter', sans-serif;
+    transition: filter 0.5s ease;
+}
+
+body.blind-mode {
+    filter: blur(8px) brightness(0.5);
+    pointer-events: none;
+}
+
+#blind-overlay {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+#blind-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#game-area {
+    position: relative;
+    overflow: hidden;
+}
+
+.key-button {
+    @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none;
+    min-width: 40px;
+    min-height: 50px;
+}
+
+.key-button.space {
+    grid-column: span 4;
+}
+
+.key-button.backspace {
+    grid-column: span 2;
+}
+
+.key-button.enter {
+    grid-column: span 2;
+}
+
+.player-cursor {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    transition: transform 0.05s linear;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-cursor .nickname {
+    position: absolute;
+    top: -25px; /* İmlecin biraz yukarısında */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    white-space: nowrap; /* Nickname tek satırda kalsın */
+}
+
+
+/* Her oyuncu için farklı renkler */
+.player-cursor.color-0 { background-color: #EF4444; }
+.player-cursor.color-1 { background-color: #3B82F6; }
+.player-cursor.color-2 { background-color: #10B981; }
+.player-cursor.color-3 { background-color: #F59E0B; }
+.player-cursor.color-4 { background-color: #8B5CF6; }
+.player-cursor.color-5 { background-color: #EC4899; }
+
+.role-button.selected {
+    @apply ring-4 ring-offset-2 ring-blue-500;
+}
+
+#message-box {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@media (max-width: 768px) {
+    .key-button {
+        padding: 10px;
+        font-size: 1rem;
+        min-width: 30px;
+        min-height: 40px;
+    }
+    #virtual-keyboard {
+        gap: 1.5px;
+        padding: 8px;
+    }
+    .key-button.space {
+        grid-column: span 3;
+    }
+    .key-button.backspace, .key-button.enter {
+        grid-column: span 2;
+    }
+    h1 {
+        font-size: 2rem;
+    }
+    #target-text {
+        font-size: 1.5rem;
+    }
+    #typed-text {
+        font-size: 1.75rem;
+    }
+    .player-cursor .nickname {
+        font-size: 0.6rem;
+        padding: 2px 4px;
+        top: -20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .key-button {
+        padding: 5px;
+        font-size: 0.8rem;
+        min-width: 25px;
+        min-height: 35px;
+    }
+    #virtual-keyboard {
+        gap: 1px;
+        padding: 5px;
+    }
+    .role-button, #start-game-button, #reset-game-button {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+    #player-id-display {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+    }
+    h1 {
+        font-size: 1.75rem;
+    }
+    #nickname-input {
+        width: 100px;
+    }
+    #change-nickname-button {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+    }
+}
