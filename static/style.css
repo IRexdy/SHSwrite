@@ -1,89 +1,101 @@
+/* static/style.css */
+
+/* Genel stil ve font */
 body {
     font-family: 'Inter', sans-serif;
-    transition: filter 0.5s ease;
+    transition: filter 0.5s ease; /* Bulanıklık efekti için geçiş */
 }
 
-/* Göremeden modunda pointer-events: none kaldırıldı */
+/* Göremeden rolü için bulanıklık ve karartma efekti */
+/* pointer-events: none; body'den kaldırıldı, çünkü göremeden de yazabilir */
 body.blind-mode {
-    filter: blur(8px) brightness(0.5);
-    /* pointer-events: none; satırı buradan kaldırıldı */
+    filter: blur(8px) brightness(0.5); /* Hem bulanıklık hem karartma */
 }
 
+/* Ekran karartma katmanı (Göremeden rolü için) */
 #blind-overlay {
-    opacity: 0;
+    opacity: 0; /* Başlangıçta gizli */
     transition: opacity 0.5s ease;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.8); /* %80 siyah şeffaflık */
 }
 
+/* ÖNEMLİ DÜZELTME: Bu katmanın tıklamaları engellememesi için pointer-events: none; */
 #blind-overlay.active {
-    opacity: 1;
-    pointer-events: auto; /* Kaplamanın kendisi hala tıklamaları engelleyebilir, ama bu sadece visual. */
+    opacity: 1; /* Aktif olduğunda görünür */
+    pointer-events: none; /* Bu katman görsel bir efekt, tıklamaları geçirmeli */
 }
 
+/* Oyun alanı */
 #game-area {
     position: relative;
-    overflow: hidden;
+    overflow: hidden; /* İmleçlerin dışarı taşmasını engelle */
 }
 
+/* Sanal klavye tuşları */
 .key-button {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400;
-    min-width: 40px;
-    min-height: 50px;
+    /* Tailwind CSS sınıfları */
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400; /* Klavye tuşları arasına çizgi için border eklendi */
+    min-width: 40px; /* Tuşların minimum genişliği */
+    min-height: 50px; /* Tuşların minimum yüksekliği */
 }
 
 .key-button.space {
-    grid-column: span 4;
+    grid-column: span 4; /* Boşluk tuşu daha geniş */
 }
 
 .key-button.backspace {
-    grid-column: span 2;
+    grid-column: span 2; /* Geri tuşu daha geniş */
 }
 
 .key-button.enter {
-    grid-column: span 2;
+    grid-column: span 2; /* Enter tuşu daha geniş */
 }
 
+/* Oyuncu imleçleri */
 .player-cursor {
     position: absolute;
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    border: 2px solid white;
+    border: 2px solid white; /* Beyaz kenarlık */
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-    pointer-events: none;
-    transition: transform 0.05s linear;
-    z-index: 100;
-    display: flex;
+    pointer-events: none; /* İmlecin altındaki öğelere tıklamayı engeller */
+    transition: transform 0.05s linear; /* Yumuşak hareket için */
+    z-index: 100; /* Diğer öğelerin üzerinde görünmesi için */
+    display: flex; /* Nickname'i ortalamak için */
     align-items: center;
     justify-content: center;
 }
 
 .player-cursor .nickname {
     position: absolute;
-    top: -25px;
+    top: -25px; /* İmlecin biraz yukarısında */
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%); /* Ortala */
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
     padding: 3px 6px;
     border-radius: 5px;
     font-size: 0.7rem;
-    white-space: nowrap;
+    white-space: nowrap; /* Nickname tek satırda kalsın */
 }
 
-.player-cursor.color-0 { background-color: #EF4444; }
-.player-cursor.color-1 { background-color: #3B82F6; }
-.player-cursor.color-2 { background-color: #10B981; }
-.player-cursor.color-3 { background-color: #F59E0B; }
-.player-cursor.color-4 { background-color: #8B5CF6; }
-.player-cursor.color-5 { background-color: #EC4899; }
+/* Her oyuncu için farklı renkler */
+.player-cursor.color-0 { background-color: #EF4444; /* Kırmızı */ }
+.player-cursor.color-1 { background-color: #3B82F6; /* Mavi */ }
+.player-cursor.color-2 { background-color: #10B981; /* Yeşil */ }
+.player-cursor.color-3 { background-color: #F59E0B; /* Turuncu */ }
+.player-cursor.color-4 { background-color: #8B5CF6; /* Mor */ }
+.player-cursor.color-5 { background-color: #EC4899; /* Pembe */ }
 
+/* Rol butonları seçildiğinde */
 .role-button.selected {
-    @apply ring-4 ring-offset-2 ring-blue-500;
+    @apply ring-4 ring-offset-2 ring-blue-500; /* Mavi halka */
 }
 
+/* Mesaj kutusu stilizasyonu */
 #message-box {
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.3s ease-out; /* Giriş animasyonu */
 }
 
 @keyframes fadeIn {
@@ -91,6 +103,7 @@ body.blind-mode {
     to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
+/* Responsiveness için medya sorguları */
 @media (max-width: 768px) {
     .key-button {
         padding: 10px;
@@ -99,14 +112,14 @@ body.blind-mode {
         min-height: 40px;
     }
     #virtual-keyboard {
-        gap: 1.5px;
+        gap: 1.5px; /* Küçük ekranlarda boşlukları azalt */
         padding: 8px;
     }
     .key-button.space {
-        grid-column: span 3;
+        grid-column: span 3; /* Daha küçük boşluk tuşu */
     }
     .key-button.backspace, .key-button.enter {
-        grid-column: span 2;
+        grid-column: span 2; /* Daha küçük geri/enter tuşu */
     }
     h1 {
         font-size: 2rem;
