@@ -3,9 +3,10 @@ body {
     transition: filter 0.5s ease;
 }
 
+/* Göremeden modunda pointer-events: none kaldırıldı */
 body.blind-mode {
     filter: blur(8px) brightness(0.5);
-    pointer-events: none;
+    /* pointer-events: none; satırı buradan kaldırıldı */
 }
 
 #blind-overlay {
@@ -16,7 +17,7 @@ body.blind-mode {
 
 #blind-overlay.active {
     opacity: 1;
-    pointer-events: auto;
+    pointer-events: auto; /* Kaplamanın kendisi hala tıklamaları engelleyebilir, ama bu sadece visual. */
 }
 
 #game-area {
@@ -24,9 +25,8 @@ body.blind-mode {
     overflow: hidden;
 }
 
-/* Sanal klavye tuşları - Çizgiler eklendi */
 .key-button {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400; /* Çizgiler için border eklendi */
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400;
     min-width: 40px;
     min-height: 50px;
 }
@@ -60,7 +60,7 @@ body.blind-mode {
 
 .player-cursor .nickname {
     position: absolute;
-    top: -25px; /* İmlecin biraz yukarısında */
+    top: -25px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.7);
@@ -68,11 +68,9 @@ body.blind-mode {
     padding: 3px 6px;
     border-radius: 5px;
     font-size: 0.7rem;
-    white-space: nowrap; /* Nickname tek satırda kalsın */
+    white-space: nowrap;
 }
 
-
-/* Her oyuncu için farklı renkler */
 .player-cursor.color-0 { background-color: #EF4444; }
 .player-cursor.color-1 { background-color: #3B82F6; }
 .player-cursor.color-2 { background-color: #10B981; }
