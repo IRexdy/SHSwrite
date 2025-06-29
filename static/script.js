@@ -1,6 +1,6 @@
 const playerIdDisplay = document.getElementById('player-id-display');
-const nicknameInput = document.getElementById('nickname-input'); // Yeni
-const changeNicknameButton = document.getElementById('change-nickname-button'); // Yeni
+const nicknameInput = document.getElementById('nickname-input');
+const changeNicknameButton = document.getElementById('change-nickname-button');
 const roleButtons = document.querySelectorAll('.role-button');
 const targetTextElement = document.getElementById('target-text');
 const typedTextElement = document.getElementById('typed-text');
@@ -11,6 +11,7 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
+const gameArea = document.getElementById('game-area'); // game-area elementini yakala
 
 const messageBox = document.getElementById('message-box');
 const messageTitle = document.getElementById('message-title');
@@ -20,7 +21,7 @@ const closeMessageBox = document.getElementById('close-message-box');
 let socket;
 let myPlayerId = null;
 let myRole = null;
-let gameAreaRect;
+let gameAreaRect; // gameArea'nın boundingClientRect'ı olacak
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500'];
 
 const keyboardLayout = [
@@ -50,7 +51,7 @@ function createVirtualKeyboard() {
             }
             button.dataset.key = key;
 
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (event) => { // event parametresini ekle
                 if (socket && myPlayerId && myRole !== 'konusmadan') {
                     socket.emit('key_press', { key: key });
                 } else if (myRole === 'konusmadan') {
@@ -58,6 +59,7 @@ function createVirtualKeyboard() {
                 } else if (!socket) {
                     showMessageBox("Hata", "Sunucuya bağlanılamadı. Lütfen sayfayı yenileyin.");
                 }
+                event.preventDefault(); // Varsayılan tıklama olayını engelle (takma ad sorunuyla ilgisi yok ama iyi pratik)
             });
             virtualKeyboard.appendChild(button);
         });
@@ -99,12 +101,6 @@ function applyRoleEffects(role) {
     }
 }
 
-/**
- * Belirtilen ID'ye sahip bir imleç elementi döndürür, yoksa oluşturur.
- * Nickname'i de ekler/günceller.
- * @param {string} id - Oyuncu ID'si.
- * @returns {HTMLElement} - İmleç div elementi.
- */
 function getOrCreateCursor(id) {
     let cursor = document.getElementById(`cursor-${id}`);
     if (!cursor) {
@@ -114,20 +110,15 @@ function getOrCreateCursor(id) {
         const colorIndex = Array.from(playerCursorsContainer.children).length % cursorColors.length;
         cursor.classList.add(`color-${colorIndex}`);
 
-        const nicknameSpan = document.createElement('span'); // Nickname için span
+        const nicknameSpan = document.createElement('span');
         nicknameSpan.classList.add('nickname');
-        cursor.appendChild(nicknameSpan); // İmlece nickname span'ini ekle
+        cursor.appendChild(nicknameSpan);
 
         playerCursorsContainer.appendChild(cursor);
     }
     return cursor;
 }
 
-
-/**
- * Tüm oyuncu imleçlerinin konumunu ve takma adlarını günceller.
- * @param {Object} playersInfo - {player_id: {x, y, nickname, role}} formatında oyuncu bilgileri.
- */
 function updatePlayerCursors(playersInfo) {
     const existingPlayerIds = new Set();
     for (const id in playersInfo) {
@@ -135,17 +126,14 @@ function updatePlayerCursors(playersInfo) {
         const player = playersInfo[id];
         const cursor = getOrCreateCursor(id);
 
-        // İmleç pozisyonlarını ayarla
         cursor.style.transform = `translate(${player.x}px, ${player.y}px)`;
 
-        // Nickname'i güncelle
         const nicknameSpan = cursor.querySelector('.nickname');
         if (nicknameSpan) {
-            nicknameSpan.textContent = `${player.nickname} (${player.role.charAt(0).toUpperCase()})`; // Nickname ve rolün baş harfi
+            nicknameSpan.textContent = `${player.nickname} (${player.role.charAt(0).toUpperCase()})`;
         }
     }
 
-    // Artık bağlı olmayan imleçleri kaldır
     Array.from(playerCursorsContainer.children).forEach(cursorElement => {
         const id = cursorElement.id.replace('cursor-', '');
         if (!existingPlayerIds.has(id)) {
@@ -154,11 +142,9 @@ function updatePlayerCursors(playersInfo) {
     });
 }
 
-
 function updateGameAreaRect() {
-    // Sanal klavyenin konumunu ve boyutunu kullanarak oyun alanı dikdörtgenini alıyoruz.
-    // Bu, imleç konumlarını hesaplarken referans noktamız olacak.
-    gameAreaRect = virtualKeyboard.getBoundingClientRect();
+    // İmleç konumlarını doğru hesaplamak için gameArea'nın boyutlarını al
+    gameAreaRect = gameArea.getBoundingClientRect();
 }
 
 function showMessageBox(title, content) {
@@ -182,24 +168,21 @@ function connectSocketIO() {
 
     socket.on('player_id', (data) => {
         myPlayerId = data.id;
-        // İlk bağlantıda gelen varsayılan nickname'i göster
         playerIdDisplay.textContent = `Oyuncu ID: ${data.nickname}`;
-        nicknameInput.value = data.nickname; // Input alanına da varsayılanı yaz
+        nicknameInput.value = data.nickname; // İlk varsayılan nickname'i input'a yaz
     });
 
     socket.on('game_state', (data) => {
-        // game_state artık 'cursors' yerine 'players_info' içeriyor
         updatePlayerCursors(data.players_info);
         targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
         typedTextElement.textContent = data.typed_text;
         timerElement.textContent = data.elapsed_time.toFixed(2);
 
-        // Kendi oyuncu ID'miz için rol ve nickname'i güncelle
+        // Kendi oyuncu ID'miz için rol ve görüntülenen nickname'i güncelle
         if (myPlayerId && data.players_info[myPlayerId]) {
             const myInfo = data.players_info[myPlayerId];
-            myRole = myInfo.role; // Rolü güncel tut
-            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`; // Takma adı göster
-            nicknameInput.value = myInfo.nickname; // Input alanını güncel tut
+            myRole = myInfo.role;
+            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`; // Görüntülenen nickname'i güncel tut
 
             // Seçilen rol butonunu vurgula
             roleButtons.forEach(btn => {
@@ -232,7 +215,6 @@ function connectSocketIO() {
         showMessageBox("Oyun Bitti!", `Tebrikler! Metni ${data.time_taken.toFixed(2)} saniyede yazdınız.`);
     });
 
-    // Backend'den gelen özel mesaj kutusu olayını dinle
     socket.on('message_box', (data) => {
         showMessageBox(data.title, data.content);
     });
@@ -252,6 +234,7 @@ function connectSocketIO() {
 
 document.addEventListener('mousemove', (event) => {
     if (myPlayerId) {
+        // İmleç konumunu gameArea'ya göre ayarla
         const x = event.clientX - gameAreaRect.left;
         const y = event.clientY - gameAreaRect.top;
 
@@ -275,20 +258,27 @@ resetGameButton.addEventListener('click', () => {
     myRole = null;
     roleButtons.forEach(btn => btn.classList.remove('selected'));
     applyRoleEffects(null);
-    nicknameInput.value = ""; // Nickname input'unu da temizle
+    // Reset sonrası server varsayılan nickname göndereceği için inputu temizlememize gerek yok,
+    // server'dan gelecek nickname inputa yazılacak.
 });
 
 closeMessageBox.addEventListener('click', hideMessageBox);
 
-// Nickname değiştirme butonu olay dinleyicisi
-changeNicknameButton.addEventListener('click', () => {
+changeNicknameButton.addEventListener('click', (event) => { // event parametresini ekle
     const newNickname = nicknameInput.value.trim();
     if (newNickname) {
         socket.emit('change_nickname', { nickname: newNickname });
     } else {
         showMessageBox("Uyarı", "Takma ad boş olamaz!");
     }
+    event.preventDefault(); // Butonun varsayılan davranışını engelle
 });
+
+// Nickname input alanına odaklanınca veya içindeki metin değişince oluşabilecek sorunları engellemek için
+// game_state update'inde nicknameInput.value'yi sürekli güncelleme kaldırıldı.
+// NicknameInput.value, sadece ilk bağlantıda ve kullanıcı 'Değiştir' butonuna basınca güncellenecek.
+// Bu, kullanıcının typing sırasında input'un resetlenmesini önler.
+// Ancak player ID'si ve görüntülenen nickname (player-id-display) her zaman güncel kalacak.
 
 
 window.addEventListener('resize', updateGameAreaRect);
@@ -298,5 +288,5 @@ document.addEventListener('DOMContentLoaded', () => {
     createVirtualKeyboard();
     setupRoleSelection();
     connectSocketIO();
-    updateGameAreaRect();
+    updateGameAreaRect(); // İlk yüklemede gameAreaRect'i ayarla
 });

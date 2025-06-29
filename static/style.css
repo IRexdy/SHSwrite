@@ -24,8 +24,9 @@ body.blind-mode {
     overflow: hidden;
 }
 
+/* Sanal klavye tuşları - Çizgiler eklendi */
 .key-button {
-    @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none;
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400; /* Çizgiler için border eklendi */
     min-width: 40px;
     min-height: 50px;
 }

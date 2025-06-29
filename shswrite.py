@@ -3,13 +3,14 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 import time
 import random
 import uuid
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '1eq2r345tbn89s990zr64jgthnmb252'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '1eq2r345tbn89s990zr64jgthnmb252')
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 connected_sids = {}
-player_data = {} # Artık {'sid': str, 'x': int, 'y': int, 'nickname': str} içerecek
+player_data = {}
 player_roles = {}
 target_text = ""
 typed_text = ""
@@ -38,18 +39,17 @@ def get_game_state():
     elif not game_started and end_time > 0:
         elapsed_time = end_time - start_time
 
-    # İmleçler, roller ve takma adlar için birleşik bir oyuncu listesi oluştur
     players_info = {}
     for pid, data in player_data.items():
         players_info[pid] = {
             'x': data.get('x', 0),
             'y': data.get('y', 0),
-            'nickname': data.get('nickname', f"Oyuncu_{pid[:4]}"), # Nickname'i ekle
-            'role': player_roles.get(pid, 'Rol Seçilmedi') # Rolü de ekle
+            'nickname': data.get('nickname', f"Oyuncu_{pid[:4]}"),
+            'role': player_roles.get(pid, 'Rol Seçilmedi')
         }
 
     return {
-        "players_info": players_info, # Tüm oyuncu bilgilerini tek bir anahtarda gönder
+        "players_info": players_info,
         "target_text": target_text,
         "typed_text": typed_text,
         "game_started": game_started,
@@ -64,7 +64,7 @@ def index():
 def handle_connect():
     player_id = str(uuid.uuid4())
     connected_sids[request.sid] = player_id
-    player_data[player_id] = {'sid': request.sid, 'x': 0, 'y': 0, 'nickname': f"Oyuncu_{player_id[:4]}"} # Varsayılan takma ad
+    player_data[player_id] = {'sid': request.sid, 'x': 0, 'y': 0, 'nickname': f"Oyuncu_{player_id[:4]}"}
     print(f"Yeni oyuncu bağlandı: {player_id} (SID: {request.sid}). Toplam bağlı: {len(connected_sids)}")
 
     emit('player_id', {'id': player_id, 'nickname': player_data[player_id]['nickname']}, room=request.sid)
@@ -143,7 +143,7 @@ def handle_change_nickname(data):
     player_id = connected_sids.get(request.sid)
     if player_id and 'nickname' in data:
         new_nickname = data['nickname'].strip()
-        if new_nickname: # Boş takma adlara izin verme
+        if new_nickname:
             player_data[player_id]['nickname'] = new_nickname
             print(f"Oyuncu {player_id} takma adını '{new_nickname}' olarak değiştirdi.")
             emit('game_state', get_game_state(), broadcast=True)
@@ -173,11 +173,22 @@ def handle_reset_game():
     game_started = False
     start_time = 0
     end_time = 0
-    player_data.clear()
-    player_roles.clear()
-    connected_sids.clear()
+    
+    for pid in list(player_data.keys()):
+        player_data[pid]['x'] = 0
+        player_data[pid]['y'] = 0
+        player_data[pid]['nickname'] = f"Oyuncu_{pid[:4]}"
+        player_roles.pop(pid, None)
+
     print("Oyun sıfırlandı.")
     emit('game_state', get_game_state(), broadcast=True)
 
 if __name__ == "__main__":
+    # Eğer uygulamanız shswrite.py olarak adlandırıldıysa ve onu değiştirmek istemiyorsanız,
+    # bu kısmı doğrudan çalıştırmak yerine Procfile'ı kullanın.
+    # Ancak yerel test için yine de app.py adında bir dosyanızın olması beklenir.
+    # Eğer shswrite.py olarak kalmasını istiyorsanız ve yerelde deniyorsanız,
+    # python shswrite.py yerine gunicorn komutunu kullanmanız gerekir:
+    # gunicorn --worker-class eventlet -w 1 shswrite:app --bind 0.0.0.0:5000
+    # Bu durumda __name__ == "__main__" kısmı çalışmaz, gunicorn direkt başlatır.
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
