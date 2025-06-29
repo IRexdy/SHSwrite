@@ -7,7 +7,6 @@ body {
 }
 
 /* Göremeden rolü için bulanıklık ve karartma efekti */
-/* pointer-events: none; body'den kaldırıldı, çünkü göremeden de yazabilir */
 body.blind-mode {
     filter: blur(8px) brightness(0.5); /* Hem bulanıklık hem karartma */
 }

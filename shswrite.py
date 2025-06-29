@@ -70,7 +70,7 @@ def get_game_state():
         "players_info": players_info, # Tüm oyuncu bilgilerini tek bir anahtarda gönder
         "target_text": target_text,
         "typed_text": typed_text,
-        "game_started": game_started,
+        "game_started": game_started, # Oyunun başlatılma durumunu gönderiyoruz
         "elapsed_time": round(elapsed_time, 2)
     }
 
@@ -141,8 +141,7 @@ def handle_key_press(data):
 
     # Oyun başlamadıysa veya oyuncu ID'si yoksa tuş basımını dikkate alma
     if not game_started or not player_id:
-        # Oyuncuya oyunun başlamadığını bildiren mesaj gönder (eğer gerekiyorsa)
-        # Frontend'de bu kontrolü daha iyi ele alacağız.
+        # Frontend'de bu kontrolü daha iyi ele alacağız. Sunucu burada işlem yapmaz.
         return
 
     key = data["key"]
