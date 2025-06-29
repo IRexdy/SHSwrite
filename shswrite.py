@@ -5,7 +5,7 @@ import random
 import uuid
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'sizin_gizli_anahtariniz_buraya'
+app.config['SECRET_KEY'] = '1eq2r345tbn89s990zr64jgthnmb252'
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 connected_sids = {}
