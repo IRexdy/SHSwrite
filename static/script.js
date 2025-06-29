@@ -29,6 +29,9 @@ let myRole = null; // Bu istemcinin kendi rolü
 let gameAreaRect; // Oyun alanının boyutları ve konumu (imleç hesaplamaları için)
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500']; // İmleç renkleri
 
+// İstemci tarafında oyunun başlayıp başlamadığını takip eden bayrak
+let isGameStarted = false; // YENİ: Bu değişkeni ekledik!
+
 // --- Sanal Klavye Tuşları ---
 const keyboardLayout = [
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'ı', 'o', 'p', 'ğ', 'ü'],
@@ -65,18 +68,26 @@ function createVirtualKeyboard() {
 
             // Tuş tıklama olay dinleyicisi
             button.addEventListener('click', (event) => {
+                event.preventDefault(); // Varsayılan tıklama olayını engelle
+
+                if (!socket || !myPlayerId) {
+                    showMessageBox("Hata", "Sunucuya bağlanılamadı veya oyuncu ID'si yok. Lütfen sayfayı yenileyin.");
+                    return;
+                }
+
+                // YENİ KONTROL: Oyun başlamadıysa yazmayı engelle ve uyarı ver
+                if (!isGameStarted) {
+                    showMessageBox("Uyarı", "Oyun henüz başlamadı. Oyunu başlatmak için 'Oyunu Başlat' butonuna tıklamalısınız.");
+                    return;
+                }
+
                 // Kural: Sadece 'goremeden' rolündeki oyuncu yazabilir
                 if (myRole === 'goremeden') {
-                    if (socket && myPlayerId) {
-                        socket.emit('key_press', { key: key });
-                    } else if (!socket) {
-                        showMessageBox("Hata", "Sunucuya bağlanılamadı. Lütfen sayfayı yenileyin.");
-                    }
+                    socket.emit('key_press', { key: key });
                 } else {
                     // Diğer roller yazmaya çalıştığında uyarı göster
                     showMessageBox("Uyarı", "Bu rolde metin yazamazsınız. Göremeden rolündeki oyuncuyu yönlendirmeniz gerekiyor.");
                 }
-                event.preventDefault(); // Butonun varsayılan davranışını (örneğin form submit olmasını) engelle
             });
             virtualKeyboard.appendChild(button);
         });
@@ -136,7 +147,7 @@ function getOrCreateCursor(id) {
 
         const nicknameSpan = document.createElement('span'); // Nickname için span elementi
         nicknameSpan.classList.add('nickname');
-        cursor.appendChild(nicknameSpan); // İmlece nickname span'ini ekle
+        cursor.appendChild(nicknameSpan); // İmlece nickname span'ini ekla
 
         playerCursorsContainer.appendChild(cursor);
     }
@@ -223,6 +234,9 @@ function connectSocketIO() {
     });
 
     socket.on('game_state', (data) => {
+        // YENİ: İstemci tarafındaki oyun başlatma bayrağını güncelle
+        isGameStarted = data.game_started;
+
         // Oyun durumu güncellemelerini işle
         updatePlayerCursors(data.players_info); // İmleçleri ve nickname'leri güncelle
         targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
@@ -233,7 +247,8 @@ function connectSocketIO() {
         if (myPlayerId && data.players_info[myPlayerId]) {
             const myInfo = data.players_info[myPlayerId];
             myRole = myInfo.role;
-            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`; // Kendi nickname'imizi güncel tut
+            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`;
+            // nicknameInput.value = myInfo.nickname; // Bu satır yoruma alındı: Input alanının yazım sırasında resetlenmemesi için
 
             // Seçilen rol butonunu vurgula
             roleButtons.forEach(btn => {

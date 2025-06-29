@@ -141,6 +141,8 @@ def handle_key_press(data):
 
     # Oyun başlamadıysa veya oyuncu ID'si yoksa tuş basımını dikkate alma
     if not game_started or not player_id:
+        # Oyuncuya oyunun başlamadığını bildiren mesaj gönder (eğer gerekiyorsa)
+        # Frontend'de bu kontrolü daha iyi ele alacağız.
         return
 
     key = data["key"]

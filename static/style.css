@@ -19,7 +19,7 @@ body.blind-mode {
     background-color: rgba(0, 0, 0, 0.8); /* %80 siyah şeffaflık */
 }
 
-/* ÖNEMLİ DÜZELTME: Bu katmanın tıklamaları engellememesi için pointer-events: none; */
+/* ÖNEMLİ: Bu katmanın tıklamaları engellememesi için pointer-events: none; */
 #blind-overlay.active {
     opacity: 1; /* Aktif olduğunda görünür */
     pointer-events: none; /* Bu katman görsel bir efekt, tıklamaları geçirmeli */
