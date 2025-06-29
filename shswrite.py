@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 # Gizli anahtar, oturum yönetimi ve güvenlik için gereklidir.
 # Ortam değişkeninden (RENDER gibi platformlarda) veya varsayılan bir değerden alınır.
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'lutfen_burayi_guvenli_bir_anahtarla_degistirin')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '1eq2r345tbn89s990zr64jgthnmb252')
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 # --- Oyun Durumu Değişkenleri ---
