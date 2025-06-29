@@ -11,7 +11,7 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
-const gameArea = document.getElementById('game-area'); // game-area elementini yakala
+const gameArea = document.getElementById('game-area');
 
 const messageBox = document.getElementById('message-box');
 const messageTitle = document.getElementById('message-title');
@@ -21,7 +21,7 @@ const closeMessageBox = document.getElementById('close-message-box');
 let socket;
 let myPlayerId = null;
 let myRole = null;
-let gameAreaRect; // gameArea'nın boundingClientRect'ı olacak
+let gameAreaRect;
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500'];
 
 const keyboardLayout = [
@@ -51,7 +51,12 @@ function createVirtualKeyboard() {
             }
             button.dataset.key = key;
 
-            button.addEventListener('click', (event) => { // event parametresini ekle
+            button.addEventListener('click', (event) => {
+                if (myRole === 'goremeden') {
+                    showMessageBox("Uyarı", "Göremeden rolündeyken klavyeyi kullanamazsınız. Diğer oyuncuların yönlendirmesine ihtiyacınız var.");
+                    event.preventDefault(); // Varsayılan tıklama olayını engelle
+                    return;
+                }
                 if (socket && myPlayerId && myRole !== 'konusmadan') {
                     socket.emit('key_press', { key: key });
                 } else if (myRole === 'konusmadan') {
@@ -59,7 +64,7 @@ function createVirtualKeyboard() {
                 } else if (!socket) {
                     showMessageBox("Hata", "Sunucuya bağlanılamadı. Lütfen sayfayı yenileyin.");
                 }
-                event.preventDefault(); // Varsayılan tıklama olayını engelle (takma ad sorunuyla ilgisi yok ama iyi pratik)
+                event.preventDefault();
             });
             virtualKeyboard.appendChild(button);
         });
@@ -76,7 +81,7 @@ function setupRoleSelection() {
                 roleButtons.forEach(btn => btn.classList.remove('selected'));
                 button.classList.add('selected');
 
-                applyRoleEffects(myRole);
+                applyRoleEffects(myRole); // Rol efektlerini uygula
             }
         });
     });
@@ -86,19 +91,17 @@ function applyRoleEffects(role) {
     if (role === 'goremeden') {
         blindOverlay.classList.add('active');
         document.body.classList.add('blind-mode');
-        startGameButton.disabled = false;
+        // Göremeden rolündeyken başlat butonu etkin görünse bile tıklanamaz olmalı,
+        // çünkü body üzerinde pointer-events:none var.
+        startGameButton.disabled = false; // Görsel olarak enabled tutalım
     } else {
         blindOverlay.classList.remove('active');
         document.body.classList.remove('blind-mode');
+        startGameButton.disabled = false; // Diğer roller için etkin
     }
 
-    if (role === 'duymadan') {
-        startGameButton.disabled = false;
-    }
-
-    if (role === 'konusmadan') {
-        startGameButton.disabled = false;
-    }
+    // Oyun zaten başlamışsa, rol ne olursa olsun başlat butonu devre dışı kalır.
+    // Bu mantık game_state event'inde zaten var.
 }
 
 function getOrCreateCursor(id) {
@@ -143,7 +146,6 @@ function updatePlayerCursors(playersInfo) {
 }
 
 function updateGameAreaRect() {
-    // İmleç konumlarını doğru hesaplamak için gameArea'nın boyutlarını al
     gameAreaRect = gameArea.getBoundingClientRect();
 }
 
@@ -163,13 +165,13 @@ function connectSocketIO() {
     socket.on('connect', () => {
         console.log('Socket.IO bağlantısı kuruldu.');
         gameStatusElement.textContent = "Bağlandı, rol seçin.";
-        startGameButton.disabled = false;
+        startGameButton.disabled = false; // Bağlantı kurulduğunda aktif
     });
 
     socket.on('player_id', (data) => {
         myPlayerId = data.id;
         playerIdDisplay.textContent = `Oyuncu ID: ${data.nickname}`;
-        nicknameInput.value = data.nickname; // İlk varsayılan nickname'i input'a yaz
+        nicknameInput.value = data.nickname;
     });
 
     socket.on('game_state', (data) => {
@@ -178,13 +180,12 @@ function connectSocketIO() {
         typedTextElement.textContent = data.typed_text;
         timerElement.textContent = data.elapsed_time.toFixed(2);
 
-        // Kendi oyuncu ID'miz için rol ve görüntülenen nickname'i güncelle
         if (myPlayerId && data.players_info[myPlayerId]) {
             const myInfo = data.players_info[myPlayerId];
             myRole = myInfo.role;
-            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`; // Görüntülenen nickname'i güncel tut
+            playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`;
+            // nicknameInput.value = myInfo.nickname; // Bu satırı kaldırdık, input sürekli resetlenmesin.
 
-            // Seçilen rol butonunu vurgula
             roleButtons.forEach(btn => {
                 if (btn.id.replace('role-', '') === myRole) {
                     btn.classList.add('selected');
@@ -192,8 +193,8 @@ function connectSocketIO() {
                     btn.classList.remove('selected');
                 }
             });
+            applyRoleEffects(myRole); // Her game_state güncellemesinde rol efektlerini tekrar uygula
         }
-
 
         if (data.game_started) {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
@@ -201,7 +202,11 @@ function connectSocketIO() {
             resetGameButton.disabled = false;
         } else {
             gameStatusElement.textContent = "Oyun Başlamadı.";
-            startGameButton.disabled = false;
+            // Oyun başlamadıysa ve bağlantı varsa başlat butonunu aktif et
+            if (socket.connected) {
+                startGameButton.disabled = false;
+            }
+            resetGameButton.disabled = false;
             if (data.target_text && data.typed_text === data.target_text && data.elapsed_time > 0) {
                  gameStatusElement.textContent = "Oyun Bitti!";
             }
@@ -223,18 +228,20 @@ function connectSocketIO() {
         console.log('Socket.IO bağlantısı kesildi.');
         gameStatusElement.textContent = "Bağlantı Kesildi. Yeniden bağlanılıyor...";
         startGameButton.disabled = true;
+        resetGameButton.disabled = true; // Bağlantı kesildiğinde reset de devre dışı kalsın
         setTimeout(connectSocketIO, 3000);
     });
 
     socket.on('connect_error', (error) => {
         console.error('Socket.IO bağlantı hatası:', error);
         gameStatusElement.textContent = "Bağlantı Hatası. Yeniden bağlanılıyor...";
+        startGameButton.disabled = true;
+        resetGameButton.disabled = true;
     });
 }
 
 document.addEventListener('mousemove', (event) => {
     if (myPlayerId) {
-        // İmleç konumunu gameArea'ya göre ayarla
         const x = event.clientX - gameAreaRect.left;
         const y = event.clientY - gameAreaRect.top;
 
@@ -245,44 +252,46 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
-startGameButton.addEventListener('click', () => {
+startGameButton.addEventListener('click', (event) => {
+    // Göremeden rolündeyse oyunu başlatamaz, hata mesajı ver.
+    if (myRole === 'goremeden') {
+        showMessageBox("Uyarı", "Göremeden rolündeyken oyunu başlatamazsınız. Başka bir oyuncunun başlatması gerekiyor.");
+        event.preventDefault(); // Butonun varsayılan davranışını engelle
+        return;
+    }
     if (!myRole) {
         showMessageBox("Rol Seçilmedi", "Lütfen oyunu başlatmadan önce bir rol seçin (Göremeden, Duymadan, Konuşmadan).");
+        event.preventDefault();
         return;
     }
     socket.emit('start_game');
+    event.preventDefault(); // Butonun varsayılan davranışını engelle
 });
 
-resetGameButton.addEventListener('click', () => {
+resetGameButton.addEventListener('click', (event) => {
     socket.emit('reset_game');
     myRole = null;
     roleButtons.forEach(btn => btn.classList.remove('selected'));
     applyRoleEffects(null);
-    // Reset sonrası server varsayılan nickname göndereceği için inputu temizlememize gerek yok,
-    // server'dan gelecek nickname inputa yazılacak.
+    event.preventDefault(); // Butonun varsayılan davranışını engelle
 });
 
 closeMessageBox.addEventListener('click', hideMessageBox);
 
-changeNicknameButton.addEventListener('click', (event) => { // event parametresini ekle
+changeNicknameButton.addEventListener('click', (event) => {
     const newNickname = nicknameInput.value.trim();
     if (newNickname) {
         socket.emit('change_nickname', { nickname: newNickname });
+        // nicknameInput.blur(); // Inputtan odağı kaldır, klavyenin kapanmasına yardımcı olabilir
     } else {
         showMessageBox("Uyarı", "Takma ad boş olamaz!");
     }
-    event.preventDefault(); // Butonun varsayılan davranışını engelle
+    event.preventDefault(); // Formun submit olmasını engelle (nickname input'u bir formun parçasıysa)
 });
 
-// Nickname input alanına odaklanınca veya içindeki metin değişince oluşabilecek sorunları engellemek için
-// game_state update'inde nicknameInput.value'yi sürekli güncelleme kaldırıldı.
-// NicknameInput.value, sadece ilk bağlantıda ve kullanıcı 'Değiştir' butonuna basınca güncellenecek.
-// Bu, kullanıcının typing sırasında input'un resetlenmesini önler.
-// Ancak player ID'si ve görüntülenen nickname (player-id-display) her zaman güncel kalacak.
-
-
+// İmleç konumunun doğru ayarlanması için, gameArea'nın boyutlarını ve konumunu sürekli güncelle
 window.addEventListener('resize', updateGameAreaRect);
-window.addEventListener('scroll', updateGameAreaRect);
+window.addEventListener('scroll', updateGameAreaRect); // Sayfa kaydığında da imleç pozisyonu doğru kalsın
 
 document.addEventListener('DOMContentLoaded', () => {
     createVirtualKeyboard();
