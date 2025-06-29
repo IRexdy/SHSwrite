@@ -30,7 +30,7 @@ let gameAreaRect; // Oyun alanının boyutları ve konumu (imleç hesaplamaları
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500']; // İmleç renkleri
 
 // İstemci tarafında oyunun başlayıp başlamadığını takip eden bayrak
-let isGameStarted = false; // YENİ: Bu değişkeni ekledik!
+let isGameStarted = false; // BU ÇOK ÖNEMLİ!
 
 // --- Sanal Klavye Tuşları ---
 const keyboardLayout = [
@@ -75,13 +75,13 @@ function createVirtualKeyboard() {
                     return;
                 }
 
-                // YENİ KONTROL: Oyun başlamadıysa yazmayı engelle ve uyarı ver
+                // ÖNEMLİ KONTROL: Oyun başlamadıysa hiçbir tuş basımını kabul etme ve uyarı ver
                 if (!isGameStarted) {
                     showMessageBox("Uyarı", "Oyun henüz başlamadı. Oyunu başlatmak için 'Oyunu Başlat' butonuna tıklamalısınız.");
                     return;
                 }
 
-                // Kural: Sadece 'goremeden' rolündeki oyuncu yazabilir
+                // Kural: SADECE 'goremeden' rolündeki oyuncu yazabilir
                 if (myRole === 'goremeden') {
                     socket.emit('key_press', { key: key });
                 } else {
@@ -147,7 +147,7 @@ function getOrCreateCursor(id) {
 
         const nicknameSpan = document.createElement('span'); // Nickname için span elementi
         nicknameSpan.classList.add('nickname');
-        cursor.appendChild(nicknameSpan); // İmlece nickname span'ini ekla
+        cursor.appendChild(nicknameSpan); // İmlece nickname span'ini ekle
 
         playerCursorsContainer.appendChild(cursor);
     }
@@ -234,7 +234,7 @@ function connectSocketIO() {
     });
 
     socket.on('game_state', (data) => {
-        // YENİ: İstemci tarafındaki oyun başlatma bayrağını güncelle
+        // ÖNEMLİ: İstemci tarafındaki oyun başlatma bayrağını güncelle
         isGameStarted = data.game_started;
 
         // Oyun durumu güncellemelerini işle

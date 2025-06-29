@@ -134,6 +134,7 @@ def handle_key_press(data):
     player_id = connected_sids.get(request.sid)
     
     # Kural: SADECE 'goremeden' rolündeki oyuncu yazabilsin
+    # Oyun başlamamışsa da bu kontrol geçerlidir, çünkü bu bir rol kısıtlamasıdır.
     if player_id and player_roles.get(player_id) != 'goremeden':
         # Yazmaya çalışan diğer rollere uyarı gönder
         emit('message_box', {'title': 'Uyarı', 'content': 'Bu rolde metin yazamazsınız. Göremeden rolündeki oyuncuyu yönlendirmeniz gerekiyor.'}, room=request.sid)
