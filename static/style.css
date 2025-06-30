@@ -9,7 +9,7 @@ body {
 /* Göremeden rolü için bulanıklık ve karartma efekti */
 body.blind-mode {
     filter: blur(8px) brightness(0.5); /* Hem bulanıklık hem karartma */
-    pointer-events: none; /* Klavyeyi etkilememesi için */
+    /* Bu body efekti, klavye hariç diğer alanları etkileyecek */
 }
 
 /* Ekran karartma katmanı (Göremeden rolü için) */
@@ -17,18 +17,32 @@ body.blind-mode {
     opacity: 0; /* Başlangıçta gizli */
     transition: opacity 0.5s ease;
     background-color: rgba(0, 0, 0, 0.8); /* %80 siyah şeffaflık */
+    pointer-events: none; /* Bu katman görsel bir efekt, tıklamaları geçirmeli */
 }
 
 #blind-overlay.active {
     opacity: 1; /* Aktif olduğunda görünür */
-    pointer-events: auto; /* Tıklamaları engelle */
+    /* Göremeden rolünde bu katmanı kullanmıyoruz, çünkü sadece klavye siyah olacak */
 }
 
-/* Oyun alanı */
-#game-area {
-    position: relative;
-    overflow: hidden; /* İmleçlerin dışarı taşmasını engelle */
+/* Duymadan rolü için hedef metni gizleme */
+.target-text-blackout {
+    background-color: black !important; /* Arka planı tamamen siyah yap */
+    color: black !important; /* Metin rengini de siyah yap, böylece görünmez olur */
+    /* Metin kutusunun içindeki boşluğu korumak için min-height'ı koruyacak */
 }
+
+/* Göremeden rolü için klavyeyi simsiyah yapma */
+.keyboard-blackout {
+    background-color: black !important; /* Klavye arka planını siyah yap */
+}
+
+.keyboard-blackout .key-button {
+    background-color: black !important; /* Tuşların arka planını siyah yap */
+    color: black !important; /* Tuş üzerindeki harfleri de siyah yap */
+    border-color: black !important; /* Tuş kenarlıklarını da siyah yap */
+}
+
 
 /* Sanal klavye tuşları */
 .key-button {

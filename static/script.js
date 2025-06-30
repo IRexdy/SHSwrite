@@ -14,6 +14,7 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
+const gameArea = document.getElementById('game-area'); // gameArea elementini doğru şekilde alıyoruz
 
 // Mesaj Kutusu Elementleri
 const messageBox = document.getElementById('message-box');
@@ -25,8 +26,10 @@ const closeMessageBox = document.getElementById('close-message-box');
 let socket;
 let myPlayerId = null;
 let myRole = null;
-let gameAreaRect;
+let gameAreaRect; // gameArea'nın boyutları için
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500'];
+
+let isGameStarted = false; // Sunucudan gelen bilgiyle güncellenecek
 
 // Sanal klavye için sabit düzen
 const keyboardLayout = [
@@ -37,20 +40,6 @@ const keyboardLayout = [
 ];
 
 // --- Yardımcı Fonksiyonlar ---
-
-/**
- * Belirtilen uzunlukta rastgele harflerden oluşan bir dize oluşturur.
- * @param {number} length - Oluşturulacak dizenin uzunluğu.
- * @returns {string} - Rastgele harflerden oluşan dize.
- */
-function generateRandomLetters(length) {
-    const characters = 'abcçdefgğhıijklmnoöprsştuüvyz '; // Türkçe harfler ve boşluk
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-}
 
 /**
  * Sanal klavyeyi oluşturur ve DOM'a ekler.
@@ -77,12 +66,15 @@ function createVirtualKeyboard() {
             button.dataset.key = key; // Tuş değerini data özelliğine KÜÇÜK HARF olarak sakla
 
             // Tuş tıklama olay dinleyicisi
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault(); // Varsayılan davranışı engelle (örneğin form submit)
                 // Göremeden rolü hariç diğer roller klavye kullanamaz
                 if (socket && myPlayerId && myRole === 'goremeden') {
                     socket.emit('key_press', { key: key });
+                    console.log(`CLIENT: Emitting key_press for goremeden: ${key}`);
                 } else if (myRole !== 'goremeden') {
                     showMessageBox("Uyarı", "Bu rolde metin yazamazsınız. Göremeden rolündeki oyuncuyu yönlendirmeniz gerekiyor.");
+                    console.log(`CLIENT: Not allowed to type for role: ${myRole}`);
                 } else if (!socket) {
                     showMessageBox("Hata", "Sunucuya bağlanılamadı. Lütfen sayfayı yenileyin.");
                 }
@@ -119,19 +111,33 @@ function setupRoleSelection() {
  * @param {string} role - Seçilen oyuncu rolü ('goremeden', 'duymadan', 'konusmadan').
  */
 function applyRoleEffects(role) {
-    if (role === 'goremeden') {
-        blindOverlay.classList.add('active'); // Göremeden için karartma katmanını etkinleştir
-        document.body.classList.add('blind-mode'); // Genel bulanıklık ve karartma
-        startGameButton.disabled = false;
-    } else {
-        blindOverlay.classList.remove('active');
-        document.body.classList.remove('blind-mode');
-    }
+    console.log(`CLIENT: Applying effects for role: ${role}`);
 
-    // Diğer roller için başlat butonu durumu
-    // Sadece "Göremeden" rolü yazabildiği için, oyunu başlatma yetkisi diğer rollerde olmalı.
-    // Bu mantık server tarafından da kontrol ediliyor.
-    startGameButton.disabled = false; // Herkes oyunu başlatabilir, ancak server rol kontrolü yapacak.
+    // Tüm efektleri sıfırla
+    blindOverlay.classList.remove('active');
+    document.body.classList.remove('blind-mode');
+    targetTextElement.classList.remove('target-text-blackout');
+    virtualKeyboard.classList.remove('keyboard-blackout');
+    // Klavye tuşlarının renklerini de sıfırla (eğer keyboard-blackout tarafından değiştirildiyse)
+    document.querySelectorAll('.key-button').forEach(btn => {
+        btn.style.backgroundColor = ''; // CSS'deki varsayılanına döner
+        btn.style.color = '';
+        btn.style.borderColor = '';
+    });
+
+
+    if (role === 'goremeden') {
+        // Göremeden: Tüm ekran bulanık ve karartılmış (body.blind-mode), klavye simsiyah (keyboard-blackout)
+        document.body.classList.add('blind-mode'); // Applies blur and brightness to body
+        virtualKeyboard.classList.add('keyboard-blackout'); // Make keyboard black
+        // blindOverlay burada aktif değil çünkü klavye ile etkileşim olmalı
+        console.log("CLIENT: Blind mode (blur) activated for body, keyboard blacked out.");
+    } else if (role === 'duymadan') {
+        // Duymadan: Sadece hedef metin alanı siyah
+        targetTextElement.classList.add('target-text-blackout'); // Make target text black
+        console.log("CLIENT: Target text blacked out for Duymadan role.");
+    }
+    // Konuşmadan rolü veya rol seçilmemişse ek efekt yok.
 }
 
 /**
@@ -236,26 +242,20 @@ function connectSocketIO() {
     });
 
     socket.on('game_state', (data) => {
+        const prevGameStarted = isGameStarted;
+        isGameStarted = data.game_started;
+
         updatePlayerCursors(data.players_info);
         typedTextElement.textContent = data.typed_text;
         timerElement.textContent = data.elapsed_time.toFixed(2);
 
-        // Hedef metni role göre göster
-        if (myPlayerId && data.players_info[myPlayerId] && data.players_info[myPlayerId].role === 'duymadan') {
-            // Eğer oyuncu "Duymadan" ise, hedef metnin uzunluğu kadar rastgele harf göster
-            if (data.target_text) {
-                targetTextElement.textContent = generateRandomLetters(data.target_text.length);
-            } else {
-                targetTextElement.textContent = 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
-            }
-        } else {
-            // Diğer roller (Göremeden, Konuşmadan veya rol seçilmemişse) hedef metni olduğu gibi görür
-            targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
-        }
+        // Hedef metni her zaman sunucudan gelen haliyle ayarla, görsel efekti CSS ile kontrol et
+        targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
 
         if (myPlayerId && data.players_info[myPlayerId]) {
             const myInfo = data.players_info[myPlayerId];
-            myRole = myInfo.role;
+            myRole = myInfo.role; // Rolü her zaman sunucudan gelen bilgiyle güncelle
+            applyRoleEffects(myRole); // Rol efektlerini her zaman uygula (bu, Duymadan için CSS sınıfını ekleyecek)
             playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`;
             nicknameInput.value = myInfo.nickname;
 
@@ -268,7 +268,7 @@ function connectSocketIO() {
             });
         }
 
-        if (data.game_started) {
+        if (isGameStarted) {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
             startGameButton.disabled = true;
             resetGameButton.disabled = false;
@@ -346,8 +346,7 @@ resetGameButton.addEventListener('click', () => {
     myRole = null;
     roleButtons.forEach(btn => btn.classList.remove('selected'));
     applyRoleEffects(null);
-    // Nickname input'unu ve görüntülenen player ID'yi sıfırlama,
-    // çünkü server'dan yeni default nickname gelecek
+    createVirtualKeyboard(); // Sıfırlarken klavyeyi yeniden oluştur (sabit düzen)
 });
 
 // Mesaj kutusunu kapatma butonu
@@ -369,7 +368,7 @@ window.addEventListener('scroll', updateGameAreaRect);
 
 // --- Başlangıç Fonksiyonları ---
 document.addEventListener('DOMContentLoaded', () => {
-    createVirtualKeyboard(); // Klavyeyi oluştur
+    createVirtualKeyboard(); // Klavyeyi oluştur (sabit düzen)
     setupRoleSelection(); // Rol seçim butonlarını hazırla
     connectSocketIO(); // Socket.IO bağlantısını başlat
     updateGameAreaRect(); // Oyun alanı dikdörtgenini ilk başta ayarla
