@@ -9,6 +9,7 @@ body {
 /* Göremeden rolü için bulanıklık ve karartma efekti */
 body.blind-mode {
     filter: blur(8px) brightness(0.5); /* Hem bulanıklık hem karartma */
+    pointer-events: none; /* Klavyeyi etkilememesi için */
 }
 
 /* Ekran karartma katmanı (Göremeden rolü için) */
@@ -18,10 +19,9 @@ body.blind-mode {
     background-color: rgba(0, 0, 0, 0.8); /* %80 siyah şeffaflık */
 }
 
-/* ÖNEMLİ: Bu katmanın tıklamaları engellememesi için pointer-events: none; */
 #blind-overlay.active {
     opacity: 1; /* Aktif olduğunda görünür */
-    pointer-events: none; /* Bu katman görsel bir efekt, tıklamaları geçirmeli */
+    pointer-events: auto; /* Tıklamaları engelle */
 }
 
 /* Oyun alanı */
@@ -33,7 +33,7 @@ body.blind-mode {
 /* Sanal klavye tuşları */
 .key-button {
     /* Tailwind CSS sınıfları */
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none border border-gray-400; /* Klavye tuşları arasına çizgi için border eklendi */
+    @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 rounded-md shadow-sm transition-all duration-150 flex items-center justify-center text-xl cursor-pointer select-none;
     min-width: 40px; /* Tuşların minimum genişliği */
     min-height: 50px; /* Tuşların minimum yüksekliği */
 }
@@ -61,7 +61,7 @@ body.blind-mode {
     pointer-events: none; /* İmlecin altındaki öğelere tıklamayı engeller */
     transition: transform 0.05s linear; /* Yumuşak hareket için */
     z-index: 100; /* Diğer öğelerin üzerinde görünmesi için */
-    display: flex; /* Nickname'i ortalamak için */
+    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -70,7 +70,7 @@ body.blind-mode {
     position: absolute;
     top: -25px; /* İmlecin biraz yukarısında */
     left: 50%;
-    transform: translateX(-50%); /* Ortala */
+    transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
     padding: 3px 6px;
@@ -78,6 +78,7 @@ body.blind-mode {
     font-size: 0.7rem;
     white-space: nowrap; /* Nickname tek satırda kalsın */
 }
+
 
 /* Her oyuncu için farklı renkler */
 .player-cursor.color-0 { background-color: #EF4444; /* Kırmızı */ }
@@ -94,7 +95,7 @@ body.blind-mode {
 
 /* Mesaj kutusu stilizasyonu */
 #message-box {
-    animation: fadeIn 0.3s ease-out; /* Giriş animasyonu */
+    animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
