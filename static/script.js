@@ -75,6 +75,7 @@ function createVirtualKeyboard() {
         button.addEventListener('click', handleKeyPress); // Ortak olay dinleyici
         virtualKeyboard.appendChild(button);
     });
+    console.log("CLIENT: Virtual keyboard re-created and shuffled."); // Tanısal çıktı
 }
 
 /**
@@ -253,10 +254,8 @@ function connectSocketIO() {
 
         if (myPlayerId && data.players_info[myPlayerId]) {
             const myInfo = data.players_info[myPlayerId];
-            // Rolü her zaman sunucudan gelen bilgiyle güncelle
-            myRole = myInfo.role;
-            // Rol efektlerini her zaman uygula, böylece görsel durum sunucuyla senkronize kalır
-            applyRoleEffects(myRole);
+            myRole = myInfo.role; // Rolü her zaman sunucudan gelen bilgiyle güncelle
+            applyRoleEffects(myRole); // Rol efektlerini her zaman uygula
             playerIdDisplay.textContent = `Oyuncu ID: ${myInfo.nickname}`;
         }
         console.log(`CLIENT: Game State Updated. My Role (after update): ${myRole}`);
@@ -266,8 +265,7 @@ function connectSocketIO() {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
             startGameButton.disabled = true;
             resetGameButton.disabled = false;
-            // Oyun başladığında klavyeyi yeniden oluştur (harfleri karıştırmak için)
-            createVirtualKeyboard();
+            // Klavye artık burada yeniden oluşturulmayacak
         } else {
             gameStatusElement.textContent = "Oyun Başlamadı.";
             if (socket.connected) {
@@ -325,7 +323,7 @@ startGameButton.addEventListener('click', (event) => {
     console.log(`CLIENT: Start Game button clicked. My Role: ${myRole}`);
 
     if (myRole === 'goremeden') {
-        showMessageBox("Uyarı", "Göremeden rolündeyken oyunu başlatamazsınız. Başka bir oyuncunun başlatması gerekiyor.");
+        showMessageBox("Uyarı", "Göremeden rolündeyken oyunu başlatamazsiniz. Başka bir oyuncunun başlatması gerekiyor.");
         return;
     }
     if (!myRole) {
@@ -333,6 +331,7 @@ startGameButton.addEventListener('click', (event) => {
         return;
     }
     socket.emit('start_game');
+    createVirtualKeyboard(); // Oyun başladığında klavyeyi bir kere karıştır
 });
 
 resetGameButton.addEventListener('click', (event) => {

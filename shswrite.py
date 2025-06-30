@@ -190,6 +190,7 @@ def handle_start_game():
     if not game_started and len(connected_sids) >= 1:
         target_text_raw = random.choice(PREDEFINED_TEXTS)
         # Hedef metni küçük harfe çevir ve noktalama işaretlerini kaldır
+        # string.punctuation tüm standart noktalama işaretlerini içerir.
         target_text = target_text_raw.lower().translate(str.maketrans('', '', string.punctuation))
         typed_text = ""
         game_started = True
