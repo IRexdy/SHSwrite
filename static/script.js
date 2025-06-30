@@ -14,6 +14,7 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
+const gameArea = document.getElementById('game-area'); // gameArea elementini tekrar doğru şekilde alıyoruz
 
 // Mesaj Kutusu Elementleri
 const messageBox = document.getElementById('message-box');
@@ -25,8 +26,10 @@ const closeMessageBox = document.getElementById('close-message-box');
 let socket;
 let myPlayerId = null;
 let myRole = null;
-let gameAreaRect;
+let gameAreaRect; // gameArea'nın boyutları için
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500'];
+
+let isGameStarted = false; // Sunucudan gelen bilgiyle güncellenecek
 
 // --- Sanal Klavye Tuşları ---
 // Tüm harf tuşları (Türkçe karakterler dahil)
@@ -156,6 +159,7 @@ function getOrCreateCursor(id) {
         cursor = document.createElement('div');
         cursor.id = `cursor-${id}`;
         cursor.classList.add('player-cursor');
+        // Mevcut imleç sayısına göre renk ataması
         const colorIndex = Array.from(playerCursorsContainer.children).length % cursorColors.length;
         cursor.classList.add(`color-${colorIndex}`);
 
@@ -164,6 +168,7 @@ function getOrCreateCursor(id) {
         cursor.appendChild(nicknameSpan);
 
         playerCursorsContainer.appendChild(cursor);
+        console.log(`CLIENT: Created new cursor for player ID: ${id}`); // Tanısal çıktı
     }
     return cursor;
 }
@@ -173,6 +178,7 @@ function getOrCreateCursor(id) {
  * @param {Object} playersInfo - {player_id: {x, y, nickname, role}} formatında oyuncu bilgileri.
  */
 function updatePlayerCursors(playersInfo) {
+    console.log("CLIENT: updatePlayerCursors called with playersInfo:", playersInfo); // Tanısal çıktı
     const existingPlayerIds = new Set();
     for (const id in playersInfo) {
         existingPlayerIds.add(id);
@@ -185,12 +191,15 @@ function updatePlayerCursors(playersInfo) {
         if (nicknameSpan) {
             nicknameSpan.textContent = `${player.nickname} (${player.role.charAt(0).toUpperCase()})`;
         }
+        console.log(`CLIENT: Updated cursor for player ${id} to x:${player.x}, y:${player.y}`); // Tanısal çıktı
     }
 
+    // Artık bağlı olmayan imleçleri kaldır
     Array.from(playerCursorsContainer.children).forEach(cursorElement => {
         const id = cursorElement.id.replace('cursor-', '');
         if (!existingPlayerIds.has(id)) {
             cursorElement.remove();
+            console.log(`CLIENT: Removed cursor for disconnected player ID: ${id}`); // Tanısal çıktı
         }
     });
 }
@@ -200,7 +209,8 @@ function updatePlayerCursors(playersInfo) {
  * Bu, imleç konumlarını doğru hesaplamak için gereklidir.
  */
 function updateGameAreaRect() {
-    gameAreaRect = virtualKeyboard.getBoundingClientRect();
+    gameAreaRect = gameArea.getBoundingClientRect(); // Doğru elementin boyutlarını alıyoruz
+    console.log("CLIENT: gameAreaRect updated:", gameAreaRect); // Tanısal çıktı
 }
 
 /**
@@ -248,6 +258,7 @@ function connectSocketIO() {
         const prevGameStarted = isGameStarted;
         isGameStarted = data.game_started;
         console.log(`CLIENT: Game State Updated. Game Started: ${isGameStarted} (was ${prevGameStarted}), My Role (before update): ${myRole}`);
+        console.log(`CLIENT: Received players_info from server:`, data.players_info); // Tanısal çıktı
 
         updatePlayerCursors(data.players_info);
         targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
@@ -267,7 +278,10 @@ function connectSocketIO() {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
             startGameButton.disabled = true;
             resetGameButton.disabled = false;
-            // Klavye artık burada yeniden oluşturulmayacak, sadece startGameButton'da bir kez karışacak.
+            // Oyun yeni başladıysa klavyeyi bir kez karıştır
+            if (!prevGameStarted) { // Oyun durumu "false"dan "true"ya geçtiyse
+                createVirtualKeyboard();
+            }
         } else {
             gameStatusElement.textContent = "Oyun Başlamadı.";
             if (socket.connected) {
@@ -276,6 +290,10 @@ function connectSocketIO() {
             resetGameButton.disabled = false;
             if (data.target_text && data.typed_text === data.target_text && data.elapsed_time > 0) {
                  gameStatusElement.textContent = "Oyun Bitti!";
+            }
+            // Oyun bitince veya sıfırlanınca klavyeyi varsayılan haline getir
+            if (prevGameStarted && !isGameStarted) { // Oyun "true"dan "false"a geçtiyse
+                 createVirtualKeyboard(); // Klavyeyi sıfırlarken de karıştır
             }
         }
     });
@@ -310,6 +328,7 @@ function connectSocketIO() {
 
 document.addEventListener('mousemove', (event) => {
     if (myPlayerId) {
+        // İmleç koordinatlarını oyun alanına göre ayarla
         const x = event.clientX - gameAreaRect.left;
         const y = event.clientY - gameAreaRect.top;
 
@@ -333,7 +352,7 @@ startGameButton.addEventListener('click', (event) => {
         return;
     }
     socket.emit('start_game');
-    createVirtualKeyboard(); // Oyun başladığında klavyeyi bir kere karıştır
+    // createVirtualKeyboard(); // Bu çağrı game_state içinde koşullu olarak yapılacak
 });
 
 resetGameButton.addEventListener('click', (event) => {
@@ -360,12 +379,12 @@ changeNicknameButton.addEventListener('click', (event) => {
 });
 
 window.addEventListener('resize', updateGameAreaRect);
-window.addEventListener('scroll', updateGameAreaRect);
+window.addEventListener('scroll', updateGameAreaRect); // Sayfa kaydırıldığında da güncellensin
 
 document.addEventListener('DOMContentLoaded', () => {
     createVirtualKeyboard(); // Sayfa ilk yüklendiğinde klavyeyi oluştur
     setupRoleSelection();
     connectSocketIO();
-    updateGameAreaRect();
+    updateGameAreaRect(); // İlk yüklemede oyun alanı boyutlarını al
     console.log("CLIENT: DOMContentLoaded - Initial myRole:", myRole);
 });

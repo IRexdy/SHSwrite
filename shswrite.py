@@ -135,7 +135,6 @@ def handle_key_press(data):
     target_len = len(target_text)
 
     # 'goremeden' rolü için tuş basımı mantığı
-    # Bu blok, yukarıdaki 'if current_player_role != 'goremeden'' kontrolünden geçildiği için sadece 'goremeden' rolü için çalışır.
     if key == "Backspace":
         if current_typed_len > 0:
             typed_text = typed_text[:-1]
