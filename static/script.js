@@ -14,7 +14,6 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
-const gameArea = document.getElementById('game-area');
 
 // Mesaj Kutusu Elementleri
 const messageBox = document.getElementById('message-box');
@@ -28,8 +27,6 @@ let myPlayerId = null;
 let myRole = null;
 let gameAreaRect;
 const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-500', 'pink-500'];
-
-let isGameStarted = false; // Sunucudan gelen bilgiyle güncellenecek
 
 // --- Sanal Klavye Tuşları ---
 // Tüm harf tuşları (Türkçe karakterler dahil)
@@ -60,8 +57,8 @@ function createVirtualKeyboard() {
     shuffledLetterKeys.forEach(key => {
         const button = document.createElement('button');
         button.classList.add('key-button');
-        button.textContent = key.toUpperCase(); // Tuş metni büyük harf olsun
-        button.dataset.key = key; // Tuş değerini data özelliğine sakla
+        button.textContent = key.toUpperCase(); // Tuş metni BÜYÜK HARF olarak gösterilecek
+        button.dataset.key = key; // Tuş değerini data özelliğine KÜÇÜK HARF olarak sakla
         button.addEventListener('click', handleKeyPress); // Ortak olay dinleyici
         virtualKeyboard.appendChild(button);
     });
@@ -75,7 +72,7 @@ function createVirtualKeyboard() {
         button.addEventListener('click', handleKeyPress); // Ortak olay dinleyici
         virtualKeyboard.appendChild(button);
     });
-    console.log("CLIENT: Virtual keyboard re-created and shuffled."); // Tanısal çıktı
+    console.log("CLIENT: Virtual keyboard re-created and shuffled.");
 }
 
 /**
@@ -84,8 +81,12 @@ function createVirtualKeyboard() {
  */
 function handleKeyPress(event) {
     event.preventDefault();
-    const key = event.currentTarget.dataset.key; // data-key özelliğinden tuş değerini al
-    console.log(`CLIENT: Key '${key}' clicked. My Role: ${myRole}, Game Started: ${isGameStarted}`);
+    const key = event.currentTarget.dataset.key; // data-key özelliğinden tuş değerini al (bu küçük harf)
+    console.log(`--- CLIENT KEY PRESS DIAGNOSTIC ---`);
+    console.log(`Key: '${key}'`);
+    console.log(`Current myRole: '${myRole}'`);
+    console.log(`Current isGameStarted: ${isGameStarted}`);
+    console.log(`-----------------------------------`);
 
     if (!socket || !myPlayerId) {
         showMessageBox("Hata", "Sunucuya bağlanılamadı veya oyuncu ID'si yok. Lütfen sayfayı yenileyin.");
@@ -112,7 +113,7 @@ function handleKeyPress(event) {
 function setupRoleSelection() {
     roleButtons.forEach(button => {
         button.addEventListener('click', () => {
-            const selectedRole = button.id.replace('role-', '');
+            const selectedRole = button.id.replace('role-', ''); // "role-goremeden" -> "goremeden"
             if (myPlayerId) {
                 myRole = selectedRole; // Rolü istemci tarafında hemen ayarla
                 socket.emit('role_select', { role: myRole });
@@ -199,7 +200,7 @@ function updatePlayerCursors(playersInfo) {
  * Bu, imleç konumlarını doğru hesaplamak için gereklidir.
  */
 function updateGameAreaRect() {
-    gameAreaRect = gameArea.getBoundingClientRect();
+    gameAreaRect = virtualKeyboard.getBoundingClientRect();
 }
 
 /**
@@ -244,8 +245,9 @@ function connectSocketIO() {
     });
 
     socket.on('game_state', (data) => {
+        const prevGameStarted = isGameStarted;
         isGameStarted = data.game_started;
-        console.log(`CLIENT: Game State Updated. Game Started: ${isGameStarted}, My Role (before update): ${myRole}`);
+        console.log(`CLIENT: Game State Updated. Game Started: ${isGameStarted} (was ${prevGameStarted}), My Role (before update): ${myRole}`);
 
         updatePlayerCursors(data.players_info);
         targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
@@ -261,11 +263,11 @@ function connectSocketIO() {
         console.log(`CLIENT: Game State Updated. My Role (after update): ${myRole}`);
 
 
-        if (data.game_started) {
+        if (isGameStarted) {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
             startGameButton.disabled = true;
             resetGameButton.disabled = false;
-            // Klavye artık burada yeniden oluşturulmayacak
+            // Klavye artık burada yeniden oluşturulmayacak, sadece startGameButton'da bir kez karışacak.
         } else {
             gameStatusElement.textContent = "Oyun Başlamadı.";
             if (socket.connected) {
@@ -323,7 +325,7 @@ startGameButton.addEventListener('click', (event) => {
     console.log(`CLIENT: Start Game button clicked. My Role: ${myRole}`);
 
     if (myRole === 'goremeden') {
-        showMessageBox("Uyarı", "Göremeden rolündeyken oyunu başlatamazsiniz. Başka bir oyuncunun başlatması gerekiyor.");
+        showMessageBox("Uyarı", "Göremeden rolündeyken oyunu başlatamazsınız. Başka bir oyuncunun başlatması gerekiyor.");
         return;
     }
     if (!myRole) {
@@ -361,8 +363,9 @@ window.addEventListener('resize', updateGameAreaRect);
 window.addEventListener('scroll', updateGameAreaRect);
 
 document.addEventListener('DOMContentLoaded', () => {
-    createVirtualKeyboard(); // Sayfa yüklendiğinde klavyeyi oluştur
+    createVirtualKeyboard(); // Sayfa ilk yüklendiğinde klavyeyi oluştur
     setupRoleSelection();
     connectSocketIO();
     updateGameAreaRect();
+    console.log("CLIENT: DOMContentLoaded - Initial myRole:", myRole);
 });

@@ -10,6 +10,7 @@ import string # Noktalama işaretlerini kaldırmak için eklendi
 app = Flask(__name__)
 # Gizli anahtar, oturum yönetimi ve güvenlik için gereklidir.
 # Ortam değişkeninden (RENDER gibi platformlarda) veya varsayılan bir değerden alınır.
+# Üretim ortamında bu anahtarı güvenli bir şekilde yönettiğinizden emin olun!
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '1eq2r345tbn89s990zr64jgthnmb252')
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
@@ -74,8 +75,8 @@ def handle_connect():
     connected_sids[request.sid] = player_id
     player_data[player_id] = {'sid': request.sid, 'x': 0, 'y': 0, 'nickname': f"Oyuncu_{player_id[:4]}"}
     print(f"Yeni oyuncu bağlandı: {player_id} (SID: {request.sid}). Toplam bağlı: {len(connected_sids)}")
-    print(f"CONNECT: Current player_data: {player_data}")
-    print(f"CONNECT: Current player_roles: {player_roles}")
+    print(f"SERVER CONNECT: Current player_data: {player_data}")
+    print(f"SERVER CONNECT: Current player_roles: {player_roles}")
 
     emit('player_id', {'id': player_id, 'nickname': player_data[player_id]['nickname']}, room=request.sid)
     emit('game_state', get_game_state(), broadcast=True)
@@ -87,8 +88,8 @@ def handle_disconnect():
         player_data.pop(player_id_to_remove, None)
         player_roles.pop(player_id_to_remove, None)
         print(f"Oyuncu bağlantısı kesildi: {player_id_to_remove} (SID: {request.sid}). Kalan bağlı: {len(connected_sids)}")
-        print(f"DISCONNECT: Current player_data: {player_data}")
-        print(f"DISCONNECT: Current player_roles: {player_roles}")
+        print(f"SERVER DISCONNECT: Current player_data: {player_data}")
+        print(f"SERVER DISCONNECT: Current player_roles: {player_roles}")
 
         if not connected_sids:
             print("Tüm oyuncular ayrıldı, oyun durumu sıfırlanıyor.")
@@ -115,18 +116,18 @@ def handle_key_press(data):
     player_id = connected_sids.get(request.sid)
     
     current_player_role = player_roles.get(player_id)
-    print(f"KEY_PRESS: Player ID: {player_id}, Role: {current_player_role}, Game started: {game_started}, Key: {data['key']}")
-    print(f"KEY_PRESS: Full player_roles dict: {player_roles}")
+    print(f"SERVER KEY_PRESS: Player ID: {player_id}, Role: {current_player_role}, Game started: {game_started}, Key: {data['key']}")
+    print(f"SERVER KEY_PRESS: Full player_roles dict: {player_roles}")
 
     # Kural: SADECE 'goremeden' rolündeki oyuncu yazabilsin
     if player_id and current_player_role != 'goremeden':
         emit('message_box', {'title': 'Uyarı', 'content': 'Bu rolde metin yazamazsınız. Göremeden rolündeki oyuncuyu yönlendirmeniz gerekiyor.'}, room=request.sid)
-        print(f"KEY_PRESS: Key press ignored for non-goremeden role: {current_player_role}")
+        print(f"SERVER KEY_PRESS: Key press ignored for non-goremeden role: {current_player_role}")
         return
 
     # Oyun başlamadıysa veya oyuncu ID'si yoksa tuş basımını dikkate alma
     if not game_started or not player_id:
-        print(f"KEY_PRESS: Key press ignored because game_started={game_started} or player_id={player_id}")
+        print(f"SERVER KEY_PRESS: Key press ignored because game_started={game_started} or player_id={player_id}")
         return
 
     key = data["key"]
@@ -138,26 +139,26 @@ def handle_key_press(data):
     if key == "Backspace":
         if current_typed_len > 0:
             typed_text = typed_text[:-1]
-            print(f"KEY_PRESS: Backspace pressed by goremeden. New typed text: '{typed_text}'")
+            print(f"SERVER KEY_PRESS: Backspace pressed by goremeden. New typed text: '{typed_text}'")
     elif key == "Space":
         typed_text += " "
-        print(f"KEY_PRESS: Space pressed by goremeden. New typed text: '{typed_text}'")
+        print(f"SERVER KEY_PRESS: Space pressed by goremeden. New typed text: '{typed_text}'")
     elif key == "Enter":
-        print(f"KEY_PRESS: Enter pressed by goremeden. Typed text: '{typed_text}'")
+        print(f"SERVER KEY_PRESS: Enter pressed by goremeden. Typed text: '{typed_text}'")
         pass
     elif len(key) == 1:
         # Göremeden rolü için karakter eşleşme kontrolünü kaldırıyoruz.
         # Herhangi bir karakteri yazmasına izin veriyoruz.
         typed_text += key
-        print(f"KEY_PRESS: Key '{key}' pressed by goremeden. New typed text: '{typed_text}'")
+        print(f"SERVER KEY_PRESS: Key '{key}' pressed by goremeden. New typed text: '{typed_text}'")
     else:
-        print(f"KEY_PRESS: Unknown key type received: {key}")
+        print(f"SERVER KEY_PRESS: Unknown key type received: {key}")
 
     # Metin tamamlandı mı kontrol et (Bu kontrol hala geçerli ve genel)
     if typed_text == target_text and target_text != "":
         game_started = False
         end_time = time.time()
-        print(f"GAME_OVER: Oyun bitti! Süre: {round(end_time - start_time, 2)} saniye.")
+        print(f"SERVER GAME_OVER: Oyun bitti! Süre: {round(end_time - start_time, 2)} saniye.")
         emit('game_over', {'time_taken': round(end_time - start_time, 2)}, broadcast=True)
 
     emit('game_state', get_game_state(), broadcast=True)
@@ -168,8 +169,8 @@ def handle_role_select(data):
     if player_id and 'role' in data:
         role = data["role"]
         player_roles[player_id] = role
-        print(f"ROLE_SELECT: Oyuncu {player_id} rolünü seçti: {role}")
-        print(f"ROLE_SELECT: Current player_roles: {player_roles}")
+        print(f"SERVER ROLE_SELECT: Oyuncu {player_id} rolünü seçti: {role}")
+        print(f"SERVER ROLE_SELECT: Current player_roles: {player_roles}")
         emit('game_state', get_game_state(), broadcast=True)
 
 @socketio.on('change_nickname')
@@ -179,7 +180,7 @@ def handle_change_nickname(data):
         new_nickname = data['nickname'].strip()
         if new_nickname:
             player_data[player_id]['nickname'] = new_nickname
-            print(f"CHANGE_NICKNAME: Oyuncu {player_id} takma adını '{new_nickname}' olarak değiştirdi.")
+            print(f"SERVER CHANGE_NICKNAME: Oyuncu {player_id} takma adını '{new_nickname}' olarak değiştirdi.")
             emit('game_state', get_game_state(), broadcast=True)
         else:
             emit('message_box', {'title': 'Uyarı', 'content': 'Takma ad boş olamaz.'}, room=request.sid)
@@ -196,10 +197,10 @@ def handle_start_game():
         game_started = True
         start_time = time.time()
         end_time = 0
-        print(f"START_GAME: Oyun başladı! Hedef Metin: '{target_text}' (Uzunluk: {len(target_text)}). Game_started: {game_started}")
+        print(f"SERVER START_GAME: Oyun başladı! Hedef Metin: '{target_text}' (Uzunluk: {len(target_text)}). Game_started: {game_started}")
         emit('game_state', get_game_state(), broadcast=True)
     else:
-        print(f"START_GAME: Oyun başlatılamadı: game_started={game_started}, connected_sids={len(connected_sids)}")
+        print(f"SERVER START_GAME: Oyun başlatılamadı: game_started={game_started}, connected_sids={len(connected_sids)}")
 
 @socketio.on('reset_game')
 def handle_reset_game():
@@ -216,8 +217,8 @@ def handle_reset_game():
         player_data[pid]['nickname'] = f"Oyuncu_{pid[:4]}"
         player_roles.pop(pid, None)
 
-    print("RESET_GAME: Oyun sıfırlandı.")
-    print(f"RESET_GAME: Current player_roles: {player_roles}")
+    print("SERVER RESET_GAME: Oyun sıfırlandı.")
+    print(f"SERVER RESET_GAME: Current player_roles: {player_roles}")
     emit('game_state', get_game_state(), broadcast=True)
 
 if __name__ == "__main__":
