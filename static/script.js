@@ -14,7 +14,7 @@ const timerElement = document.getElementById('timer');
 const gameStatusElement = document.getElementById('game-status');
 const playerCursorsContainer = document.getElementById('player-cursors-container');
 const blindOverlay = document.getElementById('blind-overlay');
-const gameArea = document.getElementById('game-area'); // gameArea elementini tekrar doğru şekilde alıyoruz
+const gameArea = document.getElementById('game-area'); // gameArea elementini doğru şekilde alıyoruz
 
 // Mesaj Kutusu Elementleri
 const messageBox = document.getElementById('message-box');
@@ -32,7 +32,7 @@ const cursorColors = ['red-500', 'blue-500', 'green-500', 'orange-500', 'purple-
 let isGameStarted = false; // Sunucudan gelen bilgiyle güncellenecek
 
 // --- Sanal Klavye Tuşları ---
-// Tüm harf tuşları (Türkçe karakterler dahil)
+// Tüm harf tuşları (Türkçe karakterler dahil) - SABİT SIRADA
 const allLetterKeys = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'ı', 'o', 'p', 'ğ', 'ü',
                        'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ş', 'i',
                        'z', 'x', 'c', 'v', 'b', 'n', 'm', 'ö', 'ç'];
@@ -48,16 +48,13 @@ const fixedSpecialKeys = [
 
 /**
  * Sanal klavyeyi oluşturur ve DOM'a ekler.
- * Harf tuşlarının yerini rastgele karıştırır.
+ * Harf tuşlarının yerini rastgele karıştırmaz, sabit sırada tutar.
  */
 function createVirtualKeyboard() {
     virtualKeyboard.innerHTML = ''; // Mevcut klavyeyi temizle
 
-    // Harf tuşlarını karıştır
-    const shuffledLetterKeys = [...allLetterKeys].sort(() => Math.random() - 0.5);
-
-    // Karıştırılmış harf tuşlarını ekle
-    shuffledLetterKeys.forEach(key => {
+    // Harf tuşlarını SABİT SIRADA ekle
+    allLetterKeys.forEach(key => {
         const button = document.createElement('button');
         button.classList.add('key-button');
         button.textContent = key.toUpperCase(); // Tuş metni BÜYÜK HARF olarak gösterilecek
@@ -75,7 +72,7 @@ function createVirtualKeyboard() {
         button.addEventListener('click', handleKeyPress); // Ortak olay dinleyici
         virtualKeyboard.appendChild(button);
     });
-    console.log("CLIENT: Virtual keyboard re-created and shuffled.");
+    console.log("CLIENT: Virtual keyboard re-created (fixed layout).");
 }
 
 /**
@@ -168,7 +165,7 @@ function getOrCreateCursor(id) {
         cursor.appendChild(nicknameSpan);
 
         playerCursorsContainer.appendChild(cursor);
-        console.log(`CLIENT: Created new cursor for player ID: ${id}`); // Tanısal çıktı
+        console.log(`CLIENT: Created new cursor for player ID: ${id}`);
     }
     return cursor;
 }
@@ -178,20 +175,22 @@ function getOrCreateCursor(id) {
  * @param {Object} playersInfo - {player_id: {x, y, nickname, role}} formatında oyuncu bilgileri.
  */
 function updatePlayerCursors(playersInfo) {
-    console.log("CLIENT: updatePlayerCursors called with playersInfo:", playersInfo); // Tanısal çıktı
+    console.log("CLIENT: updatePlayerCursors called with playersInfo:", playersInfo);
     const existingPlayerIds = new Set();
     for (const id in playersInfo) {
         existingPlayerIds.add(id);
         const player = playersInfo[id];
         const cursor = getOrCreateCursor(id);
 
+        // İmleç konumunu oyun alanına göre ayarla
+        // Burada player.x ve player.y'nin zaten oyun alanı içindeki koordinatlar olduğu varsayılıyor.
         cursor.style.transform = `translate(${player.x}px, ${player.y}px)`;
 
         const nicknameSpan = cursor.querySelector('.nickname');
         if (nicknameSpan) {
             nicknameSpan.textContent = `${player.nickname} (${player.role.charAt(0).toUpperCase()})`;
         }
-        console.log(`CLIENT: Updated cursor for player ${id} to x:${player.x}, y:${player.y}`); // Tanısal çıktı
+        console.log(`CLIENT: Updated cursor for player ${id} to x:${player.x}, y:${player.y}`);
     }
 
     // Artık bağlı olmayan imleçleri kaldır
@@ -199,7 +198,7 @@ function updatePlayerCursors(playersInfo) {
         const id = cursorElement.id.replace('cursor-', '');
         if (!existingPlayerIds.has(id)) {
             cursorElement.remove();
-            console.log(`CLIENT: Removed cursor for disconnected player ID: ${id}`); // Tanısal çıktı
+            console.log(`CLIENT: Removed cursor for disconnected player ID: ${id}`);
         }
     });
 }
@@ -209,8 +208,8 @@ function updatePlayerCursors(playersInfo) {
  * Bu, imleç konumlarını doğru hesaplamak için gereklidir.
  */
 function updateGameAreaRect() {
-    gameAreaRect = gameArea.getBoundingClientRect(); // Doğru elementin boyutlarını alıyoruz
-    console.log("CLIENT: gameAreaRect updated:", gameAreaRect); // Tanısal çıktı
+    gameAreaRect = gameArea.getBoundingClientRect(); // Doğru elementin (gameArea) boyutlarını alıyoruz
+    console.log("CLIENT: gameAreaRect updated:", gameAreaRect);
 }
 
 /**
@@ -258,7 +257,7 @@ function connectSocketIO() {
         const prevGameStarted = isGameStarted;
         isGameStarted = data.game_started;
         console.log(`CLIENT: Game State Updated. Game Started: ${isGameStarted} (was ${prevGameStarted}), My Role (before update): ${myRole}`);
-        console.log(`CLIENT: Received players_info from server:`, data.players_info); // Tanısal çıktı
+        console.log(`CLIENT: Received players_info from server:`, data.players_info);
 
         updatePlayerCursors(data.players_info);
         targetTextElement.textContent = data.target_text || 'Oyun başlamadı. Bir rol seçin ve oyunu başlatın.';
@@ -278,10 +277,7 @@ function connectSocketIO() {
             gameStatusElement.textContent = "Oyun Devam Ediyor...";
             startGameButton.disabled = true;
             resetGameButton.disabled = false;
-            // Oyun yeni başladıysa klavyeyi bir kez karıştır
-            if (!prevGameStarted) { // Oyun durumu "false"dan "true"ya geçtiyse
-                createVirtualKeyboard();
-            }
+            // Klavye artık burada yeniden oluşturulmayacak, sadece startGameButton'da bir kez karışacak.
         } else {
             gameStatusElement.textContent = "Oyun Başlamadı.";
             if (socket.connected) {
@@ -290,10 +286,6 @@ function connectSocketIO() {
             resetGameButton.disabled = false;
             if (data.target_text && data.typed_text === data.target_text && data.elapsed_time > 0) {
                  gameStatusElement.textContent = "Oyun Bitti!";
-            }
-            // Oyun bitince veya sıfırlanınca klavyeyi varsayılan haline getir
-            if (prevGameStarted && !isGameStarted) { // Oyun "true"dan "false"a geçtiyse
-                 createVirtualKeyboard(); // Klavyeyi sıfırlarken de karıştır
             }
         }
     });
@@ -332,10 +324,13 @@ document.addEventListener('mousemove', (event) => {
         const x = event.clientX - gameAreaRect.left;
         const y = event.clientY - gameAreaRect.top;
 
-        socket.emit('cursor_move', {
-            x: x,
-            y: y
-        });
+        // Sadece oyun alanı içindeki hareketleri gönder
+        if (x >= 0 && x <= gameAreaRect.width && y >= 0 && y <= gameAreaRect.height) {
+            socket.emit('cursor_move', {
+                x: x,
+                y: y
+            });
+        }
     }
 });
 
@@ -352,7 +347,7 @@ startGameButton.addEventListener('click', (event) => {
         return;
     }
     socket.emit('start_game');
-    // createVirtualKeyboard(); // Bu çağrı game_state içinde koşullu olarak yapılacak
+    createVirtualKeyboard(); // Oyun başladığında klavyeyi bir kere karıştır
 });
 
 resetGameButton.addEventListener('click', (event) => {
